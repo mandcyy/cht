@@ -15,7 +15,7 @@ const io = socketIo(server, {
 
 // ========== KONFIGURASI ==========
 const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_super_secret_ganti_nanti';
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1000;
 
 // ========== MIDDLEWARE ==========
 app.use(cors({
