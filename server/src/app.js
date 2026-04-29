@@ -1,7 +1,7 @@
 const cors = require('cors');
 
 // Baca dari environment variable
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:1000';
 
 // CORS untuk Express
 app.use(cors({
