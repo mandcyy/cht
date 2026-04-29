@@ -1,17 +1,21 @@
-require('dotenv').config();
-const http = require('http');
-const app  = require('./config/express');
-const { initSocket } = require('./socket');
+const cors = require('cors');
 
-const PORT   = process.env.PORT || 4000;
-const server = http.createServer(app);
-const io     = initSocket(server);
+// Baca dari environment variable
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-// Make io accessible in controllers via req.app.get('io')
-app.set('io', io);
+// CORS untuk Express
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-server.listen(PORT, () =>
-  console.log(`[SERVER] ✅ http://localhost:${PORT} [${process.env.NODE_ENV || 'development'}]`)
-);
-
-process.on('SIGTERM', () => server.close(() => process.exit(0)));
+// CORS khusus untuk Socket.IO (kalo pake Socket.IO)
+const io = require('socket.io')(server, {
+  cors: {
+    origin: FRONTEND_URL,
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
