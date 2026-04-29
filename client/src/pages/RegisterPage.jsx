@@ -1,18 +1,28 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({ username:'', password:'', displayName:'' });
   const [err,  setErr]  = useState('');
   const [busy, setBusy] = useState(false);
 
   const submit = async e => {
-    e.preventDefault(); setErr(''); setBusy(true);
-    try { await register(form.username, form.password, form.displayName); }
-    catch(e) { setErr(e.response?.data?.error || 'Registrasi gagal'); }
-    finally { setBusy(false); }
+    e.preventDefault(); 
+    setErr(''); 
+    setBusy(true);
+    
+    try { 
+      await register(form.username, form.password, form.displayName);
+      // ✅ REDIRECT KE HALAMAN UTAMA SETELAH REGISTER BERHASIL
+      navigate('/');
+    } catch(e) { 
+      setErr(e.response?.data?.error || 'Registrasi gagal'); 
+    } finally { 
+      setBusy(false); 
+    }
   };
 
   return (
