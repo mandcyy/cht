@@ -31,3 +31,5 @@ router.put('/profile/avatar', authHTTP, updateAvatar);
 router.get('/health', (_, res) => res.json({ ok: true }));
 
 module.exports = router;
+
+router.use('/api', apiRouter);
