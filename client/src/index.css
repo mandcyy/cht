@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg:        #0e0e16;
+  --bg2:       #16161f;
+  --bg3:       #1e1e2a;
+  --bg4:       #252535;
+  --border:    rgba(255,255,255,0.07);
+  --accent:    #7c6ef5;
+  --accent2:   #9f8ff7;
+  --accentRgb: 124,110,245;
+  --green:     #25d366;
+  --red:       #ef4444;
+  --text1:     #f2f2ff;
+  --text2:     rgba(200,200,220,0.75);
+  --text3:     rgba(160,160,185,0.5);
+  --sent:      #5b4fcf;
+  --recv:      #1e1e2e;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top:    env(safe-area-inset-top, 0px);
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Root layout ─────────────────────────────────────────────
+   On MOBILE: fixed full-screen, no scroll on root
+   On DESKTOP/TABLET: allow body scroll, center the app card  */
+html {
+  height: 100%;
+  /* Allow scrolling on non-mobile if content overflows */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text1);
+  font-family: -apple-system, 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mobile: true full-screen app shell */
+@media (max-width: 640px) {
+  html, body { overflow: hidden; height: 100%; }
+}
+
+#root {
+  /* Mobile: fixed full-screen */
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  /* Desktop: center in viewport with max-width card */
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Desktop: show as centered card with shadow */
+@media (min-width: 641px) {
+  body {
+    background: #07070d;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0;
+  }
+  #root {
+    height: 100dvh;
+    box-shadow: 0 0 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+    overflow: hidden;
+  }
+}
+
+/* Scrollbars — thin on mobile, hidden on touch */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(124,110,245,.2); border-radius: 99px; }
+@media (max-width: 640px) {
+  ::-webkit-scrollbar { width: 0; height: 0; }
+}
+
+/* Inputs/textareas selectable */
+input, textarea { user-select: text; -webkit-user-select: text; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
+
+/* ── Reusable components ──────────────────────────────────── */
+.field {
+  width: 100%;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  color: var(--text1);
+  font-size: 15px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.field::placeholder { color: var(--text3); }
+.field:focus {
+  border-color: rgba(var(--accentRgb), .5);
+  box-shadow: 0 0 0 3px rgba(var(--accentRgb), .08);
+}
+
+.btn {
+  background: linear-gradient(135deg, var(--accent), #9b59f5);
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 14px;
+  padding: 13px 22px;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s, transform .12s;
+  box-shadow: 0 4px 20px rgba(var(--accentRgb), .35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.btn-ghost {
+  color: var(--text2);
+  border-radius: 10px;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, color .12s;
+}
+.btn-ghost:hover { background: var(--bg3); color: var(--text1); }
+.btn-ghost:active { background: var(--bg4); }
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(8px); }  to { opacity:1; transform:none; } }
+@keyframes fadeIn   { from { opacity:0; }                               to { opacity:1; } }
+@keyframes blink    { 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+@keyframes floatY   { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-5px); } }
+@keyframes spin     { to { transform:rotate(360deg); } }
+@keyframes slideIn  { from { transform:translateX(100%); } to { transform:translateX(0); } }
+@keyframes slideUp  { from { transform:translateY(100%); } to { transform:translateY(0); } }
+
+.anim-fadeup  { animation: fadeUp   .22s ease-out; }
+.anim-fadein  { animation: fadeIn   .18s ease-out; }
+.anim-float   { animation: floatY   3s ease-in-out infinite; }
+.anim-spin    { animation: spin     .7s linear infinite; }
+.anim-blink   { animation: blink    1.4s ease-in-out infinite; }
+.anim-slideIn { animation: slideIn  .3s cubic-bezier(.2,.8,.3,1); }
+.anim-slideUp { animation: slideUp  .3s cubic-bezier(.2,.8,.3,1); }
