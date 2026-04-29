@@ -1,28 +1,25 @@
-const { verify } = require('../utils/jwt');
-const store = require('../services/store');
+// middleware/auth.js
+const jwt = require('jsonwebtoken');
 
-function authHTTP(req, res, next) {
-  const h = req.headers.authorization;
-  if (!h?.startsWith('Bearer ')) return res.status(401).json({ error: 'Token missing' });
-  try {
-    const payload = verify(h.slice(7));
-    const user = store.getUser(payload.userId);
-    if (!user) return res.status(401).json({ error: 'User not found' });
-    req.user = user;
-    next();
-  } catch { res.status(401).json({ error: 'Token invalid or expired' }); }
-}
+const authHTTP = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia123');
+        req.userId = decoded.userId;
+        req.username = decoded.username;
+        next();
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Unauthorized: Token expired' });
+        }
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+};
 
-function authSocket(socket, next) {
-  const token = socket.handshake.auth?.token;
-  if (!token) return next(new Error('TOKEN_MISSING'));
-  try {
-    const payload = verify(token);
-    const user = store.getUser(payload.userId);
-    if (!user) return next(new Error('USER_NOT_FOUND'));
-    socket.user = user;
-    next();
-  } catch { next(new Error('TOKEN_INVALID')); }
-}
-
-module.exports = { authHTTP, authSocket };
+module.exports = { authHTTP };
