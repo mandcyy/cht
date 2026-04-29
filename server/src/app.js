@@ -2,29 +2,53 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 
-// 🔥 KONFIGURASI CORS YANG BENAR
-// Ganti dengan URL frontend Render kamu
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://cht-2.onrender.com';
-
+// ========== KONFIGURASI CORS KHUSUS RENDER ==========
+// Izinkan semua origin (biar frontend di Render bisa akses)
 app.use(cors({
-  origin: FRONTEND_URL,
-  credentials: true,
+  origin: '*', // Atau ganti dengan 'https://cht-2.onrender.com'
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware lainnya
-app.use(express.json());
-
-// Import routes (sesuaikan dengan struktur folder kamu)
-const routes = require('./routes'); // atau './routes/index.js'
-app.use('/', routes);
-
-// Handle preflight requests secara otomatis
+// Handle preflight request (penting buat Render)
 app.options('*', cors());
 
-const PORT = process.env.PORT || 10000;
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ========== ROUTES ==========
+// Route register
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, username } = req.body;
+  
+  // Ganti dengan logic register asli kamu
+  res.json({
+    success: true,
+    message: 'Register berhasil',
+    data: { email, username }
+  });
+});
+
+// Route login (contoh)
+app.post('/api/auth/login', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Login berhasil'
+  });
+});
+
+// Route test CORS
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'CORS bekerja!', 
+    timestamp: new Date().toISOString() 
+  });
+});
+
+// ========== START SERVER ==========
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`CORS enabled for: ${FRONTEND_URL}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📍 CORS enabled for all origins (including Render frontend)`);
 });
