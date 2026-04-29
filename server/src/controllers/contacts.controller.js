@@ -1,76 +1,156 @@
-const store = require('../services/store');
+// controllers/contacts.controller.js
+const users = []; // Harus sinkron dengan auth controller
+const contacts = [];
+const contactRequests = [];
 
-// GET /api/contacts — confirmed contacts
-function listContacts(req, res) {
-  res.json({ contacts: store.getContacts(req.user.id) });
-}
+// List semua kontak user
+const listContacts = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const myContacts = contacts.filter(c => c.userId === userId);
+        const contactUsers = myContacts
+            .map(c => users.find(u => u.id === c.contactId))
+            .filter(Boolean);
+        
+        const result = contactUsers.map(({ password, ...user }) => user);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-// GET /api/contacts/requests — incoming pending requests
-function listRequests(req, res) {
-  res.json({ requests: store.getIncomingRequests(req.user.id) });
-}
+// List incoming contact requests
+const listRequests = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const incoming = contactRequests.filter(
+            r => r.toUserId === userId && r.status === 'pending'
+        );
+        
+        const result = incoming.map(r => {
+            const sender = users.find(u => u.id === r.fromUserId);
+            if (!sender) return null;
+            const { password, ...senderData } = sender;
+            return { ...r, sender: senderData };
+        }).filter(Boolean);
+        
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-// POST /api/contacts/request — kirim permintaan kontak
-function sendRequest(req, res) {
-  const { username } = req.body;
-  if (!username) return res.status(400).json({ error: 'username wajib diisi' });
+// Send contact request
+const sendRequest = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { username } = req.body;
+        
+        const targetUser = users.find(u => u.username === username);
+        if (!targetUser) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+        
+        if (targetUser.id === userId) {
+            return res.status(400).json({ error: 'Tidak bisa request sendiri' });
+        }
+        
+        const alreadyContact = contacts.some(
+            c => (c.userId === userId && c.contactId === targetUser.id) ||
+                 (c.userId === targetUser.id && c.contactId === userId)
+        );
+        
+        if (alreadyContact) {
+            return res.status(400).json({ error: 'Sudah menjadi kontak' });
+        }
+        
+        const existingRequest = contactRequests.some(
+            r => r.fromUserId === userId && r.toUserId === targetUser.id && r.status === 'pending'
+        );
+        
+        if (existingRequest) {
+            return res.status(400).json({ error: 'Request sudah dikirim' });
+        }
+        
+        const newRequest = {
+            id: contactRequests.length + 1,
+            fromUserId: userId,
+            toUserId: targetUser.id,
+            status: 'pending',
+            createdAt: new Date()
+        };
+        
+        contactRequests.push(newRequest);
+        res.json({ success: true, message: 'Request kontak terkirim' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-  const target = store.getUserByUsername(username.trim());
-  if (!target)                                    return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
-  if (target.id === req.user.id)                  return res.status(400).json({ error: 'Tidak bisa menambah diri sendiri' });
-  if (store.hasContact(req.user.id, target.id))   return res.status(409).json({ error: 'Sudah ada di kontak' });
+// Accept contact request
+const acceptRequest = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { requestId } = req.body;
+        
+        const request = contactRequests.find(r => r.id === requestId);
+        if (!request) {
+            return res.status(404).json({ error: 'Request tidak ditemukan' });
+        }
+        
+        if (request.toUserId !== userId) {
+            return res.status(403).json({ error: 'Tidak punya akses' });
+        }
+        
+        if (request.status !== 'pending') {
+            return res.status(400).json({ error: 'Request sudah diproses' });
+        }
+        
+        request.status = 'accepted';
+        
+        contacts.push({
+            id: contacts.length + 1,
+            userId: request.fromUserId,
+            contactId: request.toUserId
+        });
+        contacts.push({
+            id: contacts.length + 2,
+            userId: request.toUserId,
+            contactId: request.fromUserId
+        });
+        
+        res.json({ success: true, message: 'Request diterima' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-  const request = store.sendRequest(req.user.id, target.id);
-  if (!request) return res.status(409).json({ error: 'Permintaan sudah dikirim sebelumnya' });
+// Reject contact request
+const rejectRequest = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { requestId } = req.body;
+        
+        const request = contactRequests.find(r => r.id === requestId);
+        if (!request) {
+            return res.status(404).json({ error: 'Request tidak ditemukan' });
+        }
+        
+        if (request.toUserId !== userId) {
+            return res.status(403).json({ error: 'Tidak punya akses' });
+        }
+        
+        request.status = 'rejected';
+        res.json({ success: true, message: 'Request ditolak' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-  // Kirim notif real-time ke target kalau sedang online
-  const targetSocketId = store.getSocketId(target.id);
-  if (targetSocketId) {
-    const io = req.app.get('io');
-    io.to(targetSocketId).emit('contact:request', {
-      requestId: request.id,
-      from: store.safeUser(req.user.id),
-      createdAt: request.createdAt,
-    });
-  }
-
-  res.status(201).json({ message: 'Permintaan kontak berhasil dikirim' });
-}
-
-// POST /api/contacts/accept — terima permintaan
-function acceptRequest(req, res) {
-  const { requestId } = req.body;
-  if (!requestId) return res.status(400).json({ error: 'requestId wajib diisi' });
-
-  const request = store.getRequestById(requestId);
-  if (!request)                         return res.status(404).json({ error: 'Permintaan tidak ditemukan' });
-  if (request.toId !== req.user.id)     return res.status(403).json({ error: 'Bukan permintaan untukmu' });
-
-  store.addContact(request.fromId, request.toId);
-  store.deleteRequest(requestId);
-
-  const fromUser  = store.safeUser(request.fromId);
-  const toUser    = store.safeUser(request.toId);
-
-  // Notif ke pengirim request bahwa sudah diterima
-  const fromSocketId = store.getSocketId(request.fromId);
-  if (fromSocketId) {
-    const io = req.app.get('io');
-    io.to(fromSocketId).emit('contact:accepted', { contact: toUser });
-  }
-
-  res.json({ contact: fromUser });
-}
-
-// POST /api/contacts/reject — tolak permintaan
-function rejectRequest(req, res) {
-  const { requestId } = req.body;
-  const request = store.getRequestById(requestId);
-  if (!request)                     return res.status(404).json({ error: 'Permintaan tidak ditemukan' });
-  if (request.toId !== req.user.id) return res.status(403).json({ error: 'Bukan permintaan untukmu' });
-
-  store.deleteRequest(requestId);
-  res.json({ message: 'Permintaan ditolak' });
-}
-
-module.exports = { listContacts, listRequests, sendRequest, acceptRequest, rejectRequest };
+module.exports = {
+    listContacts,
+    listRequests,
+    sendRequest,
+    acceptRequest,
+    rejectRequest
+};
