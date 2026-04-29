@@ -5,7 +5,7 @@ const app = express();
 // ========== KONFIGURASI CORS KHUSUS RENDER ==========
 // Izinkan semua origin (biar frontend di Render bisa akses)
 app.use(cors({
-  origin: '*', // Atau ganti dengan 'https://cht-2.onrender.com'
+  origin: 'https://cht-2.onrender.com', // Atau ganti dengan 'https://cht-2.onrender.com'
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
