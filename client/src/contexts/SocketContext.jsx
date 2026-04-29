@@ -18,8 +18,11 @@ export function SocketProvider({ children }) {
 
     const token = localStorage.getItem('token');
 
-    // Connect via Vite proxy (ws: true in vite.config.js handles the upgrade)
-    const s = io('http://localhost:1000', {
+    // 🔥 PAKAI ENVIRONMENT VARIABLE UNTUK PRODUCTION
+    // Kalo di lokal pake localhost:1000, kalo di Render pake URL dari env
+    const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:1000';
+
+    const s = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
