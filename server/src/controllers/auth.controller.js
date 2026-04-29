@@ -1,52 +1,110 @@
-const bcrypt  = require('bcryptjs');
-const { v4 }  = require('uuid');
-const { sign } = require('../utils/jwt');
-const store   = require('../services/store');
+// controllers/auth.controller.js
+const jwt = require('jsonwebtoken');
 
-const AVATAR_COLORS = ['#6366f1','#8b5cf6','#ec4899','#10b981','#f59e0b','#ef4444','#3b82f6','#14b8a6'];
+// Data sementara (nanti pindah ke database)
+const users = [];
 
-function makeAvatar(username) {
-  const color = AVATAR_COLORS[username.charCodeAt(0) % AVATAR_COLORS.length];
-  return { initials: username.slice(0, 2).toUpperCase(), color };
-}
+// Register
+const register = async (req, res) => {
+    try {
+        const { username, password, displayName } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username dan password wajib diisi' });
+        }
+        
+        const userExists = users.find(u => u.username === username);
+        if (userExists) {
+            return res.status(400).json({ error: 'Username sudah digunakan' });
+        }
+        
+        const newUser = {
+            id: users.length + 1,
+            username,
+            password,
+            displayName: displayName || username,
+            avatar: null,
+            createdAt: new Date()
+        };
+        
+        users.push(newUser);
+        
+        const token = jwt.sign(
+            { userId: newUser.id, username: newUser.username },
+            process.env.JWT_SECRET || 'rahasia123',
+            { expiresIn: '7d' }
+        );
+        
+        res.json({
+            success: true,
+            message: 'Register berhasil',
+            user: {
+                id: newUser.id,
+                username: newUser.username,
+                displayName: newUser.displayName,
+                avatar: newUser.avatar
+            },
+            token
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-async function register(req, res, next) {
-  try {
-    const { username, password, displayName } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'username dan password wajib diisi' });
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return res.status(400).json({ error: 'Username 3-20 karakter, hanya huruf/angka/_' });
-    if (password.length < 6) return res.status(400).json({ error: 'Password minimal 6 karakter' });
-    if (store.getUserByUsername(username)) return res.status(409).json({ error: 'Username sudah dipakai' });
+// Login
+const login = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        const user = users.find(u => u.username === username && u.password === password);
+        if (!user) {
+            return res.status(401).json({ error: 'Username atau password salah' });
+        }
+        
+        const token = jwt.sign(
+            { userId: user.id, username: user.username },
+            process.env.JWT_SECRET || 'rahasia123',
+            { expiresIn: '7d' }
+        );
+        
+        res.json({
+            success: true,
+            message: 'Login berhasil',
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatar: user.avatar
+            },
+            token
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
-    const user = {
-      id: v4(), username,
-      displayName: (displayName?.trim()) || username,
-      passwordHash: await bcrypt.hash(password, 12),
-      avatar: makeAvatar(username),
-      online: false, socketId: null, lastSeen: null,
-      createdAt: new Date(),
-    };
-    store.addUser(user);
-    const { passwordHash: _, ...safe } = user;
-    res.status(201).json({ token: sign({ userId: user.id }), user: safe });
-  } catch (e) { next(e); }
-}
-
-async function login(req, res, next) {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'username dan password wajib diisi' });
-    const user = store.getUserByUsername(username);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash)))
-      return res.status(401).json({ error: 'Username atau password salah' });
-    const { passwordHash: _, ...safe } = user;
-    res.json({ token: sign({ userId: user.id }), user: safe });
-  } catch (e) { next(e); }
-}
-
-function me(req, res) {
-  const { passwordHash: _, ...safe } = req.user;
-  res.json({ user: safe });
-}
+// Get current user (me)
+const me = async (req, res) => {
+    try {
+        const userId = req.userId; // Dari middleware authHTTP
+        const user = users.find(u => u.id === userId);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+        
+        res.json({
+            success: true,
+            user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatar: user.avatar
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
 module.exports = { register, login, me };
