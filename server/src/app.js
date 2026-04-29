@@ -5,7 +5,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:1000';
 
 // CORS untuk Express
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: https://cht-2.onrender.com,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
